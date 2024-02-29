@@ -1,0 +1,2 @@
+select *
+from DATADRIVENINVESTIGATION_sitefraudpredictions

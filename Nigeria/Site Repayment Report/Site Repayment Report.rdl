@@ -1,0 +1,1035 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Report xmlns="http://schemas.microsoft.com/sqlserver/reporting/2016/01/reportdefinition" xmlns:rd="http://schemas.microsoft.com/SQLServer/reporting/reportdesigner">
+  <rd:ReportUnitType>Inch</rd:ReportUnitType>
+  <rd:ReportID>01376c65-a942-4dfc-ae20-5aeb0eed9334</rd:ReportID>
+  <AutoRefresh>0</AutoRefresh>
+  <DataSources>
+    <DataSource Name="RepaymentDashboardDatasource">
+      <rd:SecurityType>DataBase</rd:SecurityType>
+      <ConnectionProperties>
+        <DataProvider>SQL</DataProvider>
+        <ConnectString>Data Source=mtama.oneacrefund.org,6543;Initial Catalog=RosterDataWarehouse</ConnectString>
+        <Prompt>Specify a user name and password for data source RepaymentDashboardDatasource:</Prompt>
+      </ConnectionProperties>
+      <rd:DataSourceID>219d9ccc-9079-432f-8f64-ae0ca9ab7816</rd:DataSourceID>
+    </DataSource>
+  </DataSources>
+  <DataSets>
+    <DataSet Name="RepaymentDashboardDatasource">
+      <Query>
+        <DataSourceName>RepaymentDashboardDatasource</DataSourceName>
+        <QueryParameters>
+          <QueryParameter Name="@Season">
+            <Value>=Parameters!Season.Value</Value>
+          </QueryParameter>
+        </QueryParameters>
+        <CommandText>Use RosterDataWarehouse;
+
+--First Query
+with groupInfo as(
+select 
+	DistrictName, SectorName, SiteName, GroupName, 
+	SUM(TotalRepaid) As TotalRepaid,
+	SUM(TotalCredit) As TotalCredit,
+	Count(DIMClientID) as Farmers,
+	Sum(Case when PercentRepaid = 1 then 1 end) as Finishers,
+	Count(Distinct DimGroupID) AS grps,
+	CASE WHEN SUM(TotalCredit) - SUM(TotalRepaid) = 0 THEN 1 Else 0  end AS GP
+from
+	v_ClientSalesBizOps
+where
+	CountryName = 'Nigeria'
+	AND Season = @Season
+	and TotalCredit &gt; 0
+
+group by
+	DistrictName, SectorName, SiteName, GroupName  )
+-- Second Inner Query
+select 
+	DistrictName, SectorName, SiteName, 
+	SUM(TotalCredit) As TotalCredit,sum(TotalRepaid) As Repaid,
+    sum(GP) As CompletedGroupsCount,
+	Count(GP) AS TGP,
+	Sum(Farmers) as Farmers,
+	Sum(Finishers) as Finishers,
+                   Sum(grps) as grps
+From
+	groupInfo
+Group By
+	DistrictName, SectorName, SiteName
+Order by
+   DistrictName, SectorName, SiteName</CommandText>
+      </Query>
+      <Fields>
+        <Field Name="DistrictName">
+          <rd:TypeName>System.String</rd:TypeName>
+          <DataField>DistrictName</DataField>
+        </Field>
+        <Field Name="SectorName">
+          <rd:TypeName>System.String</rd:TypeName>
+          <DataField>SectorName</DataField>
+        </Field>
+        <Field Name="SiteName">
+          <rd:TypeName>System.String</rd:TypeName>
+          <DataField>SiteName</DataField>
+        </Field>
+        <Field Name="TotalCredit">
+          <rd:TypeName>System.Decimal</rd:TypeName>
+          <DataField>TotalCredit</DataField>
+        </Field>
+        <Field Name="Repaid">
+          <rd:TypeName>System.Decimal</rd:TypeName>
+          <DataField>Repaid</DataField>
+        </Field>
+        <Field Name="CompletedGroupsCount">
+          <rd:TypeName>System.Int32</rd:TypeName>
+          <DataField>CompletedGroupsCount</DataField>
+        </Field>
+        <Field Name="TGP">
+          <rd:TypeName>System.Int32</rd:TypeName>
+          <DataField>TGP</DataField>
+        </Field>
+        <Field Name="Farmers">
+          <rd:TypeName>System.Int32</rd:TypeName>
+          <DataField>Farmers</DataField>
+        </Field>
+        <Field Name="Finishers">
+          <rd:TypeName>System.Int32</rd:TypeName>
+          <DataField>Finishers</DataField>
+        </Field>
+        <Field Name="grps">
+          <rd:TypeName>System.Int32</rd:TypeName>
+          <DataField>grps</DataField>
+        </Field>
+      </Fields>
+    </DataSet>
+  </DataSets>
+  <ReportSections>
+    <ReportSection>
+      <Body>
+        <ReportItems>
+          <Tablix Name="Tablix4">
+            <TablixBody>
+              <TablixColumns>
+                <TablixColumn>
+                  <Width>1.30833in</Width>
+                </TablixColumn>
+                <TablixColumn>
+                  <Width>0.7875in</Width>
+                </TablixColumn>
+                <TablixColumn>
+                  <Width>0.88889in</Width>
+                </TablixColumn>
+                <TablixColumn>
+                  <Width>1.32in</Width>
+                </TablixColumn>
+                <TablixColumn>
+                  <Width>0.71583in</Width>
+                </TablixColumn>
+                <TablixColumn>
+                  <Width>0.99708in</Width>
+                </TablixColumn>
+                <TablixColumn>
+                  <Width>1.08389in</Width>
+                </TablixColumn>
+                <TablixColumn>
+                  <Width>1.18458in</Width>
+                </TablixColumn>
+                <TablixColumn>
+                  <Width>0.97417in</Width>
+                </TablixColumn>
+                <TablixColumn>
+                  <Width>1.5271in</Width>
+                </TablixColumn>
+              </TablixColumns>
+              <TablixRows>
+                <TablixRow>
+                  <Height>0.66in</Height>
+                  <TablixCells>
+                    <TablixCell>
+                      <CellContents>
+                        <Textbox Name="Textbox20">
+                          <rd:DefaultName>Textbox20</rd:DefaultName>
+                          <CanGrow>true</CanGrow>
+                          <KeepTogether>true</KeepTogether>
+                          <Paragraphs>
+                            <Paragraph>
+                              <TextRuns>
+                                <TextRun>
+                                  <Value>Sites</Value>
+                                  <Style>
+                                    <FontFamily>Calibri Light</FontFamily>
+                                    <FontSize>12pt</FontSize>
+                                  </Style>
+                                </TextRun>
+                              </TextRuns>
+                              <Style>
+                                <TextAlign>Center</TextAlign>
+                              </Style>
+                            </Paragraph>
+                          </Paragraphs>
+                          <Style>
+                            <Border>
+                              <Style>Solid</Style>
+                              <Width>0.5pt</Width>
+                            </Border>
+                            <VerticalAlign>Middle</VerticalAlign>
+                            <PaddingLeft>2pt</PaddingLeft>
+                            <PaddingRight>2pt</PaddingRight>
+                            <PaddingTop>2pt</PaddingTop>
+                            <PaddingBottom>2pt</PaddingBottom>
+                          </Style>
+                        </Textbox>
+                      </CellContents>
+                    </TablixCell>
+                    <TablixCell>
+                      <CellContents>
+                        <Textbox Name="Textbox18">
+                          <rd:DefaultName>Textbox18</rd:DefaultName>
+                          <CanGrow>true</CanGrow>
+                          <KeepTogether>true</KeepTogether>
+                          <Paragraphs>
+                            <Paragraph>
+                              <TextRuns>
+                                <TextRun>
+                                  <Value>% Repaid</Value>
+                                  <Style>
+                                    <FontFamily>Calibri Light</FontFamily>
+                                    <FontSize>12pt</FontSize>
+                                  </Style>
+                                </TextRun>
+                              </TextRuns>
+                              <Style>
+                                <TextAlign>Center</TextAlign>
+                              </Style>
+                            </Paragraph>
+                          </Paragraphs>
+                          <Style>
+                            <Border>
+                              <Style>Solid</Style>
+                              <Width>0.5pt</Width>
+                            </Border>
+                            <TopBorder>
+                              <Color>Black</Color>
+                              <Style>Solid</Style>
+                              <Width>0.5pt</Width>
+                            </TopBorder>
+                            <BottomBorder>
+                              <Color>Black</Color>
+                              <Style>Solid</Style>
+                              <Width>0.5pt</Width>
+                            </BottomBorder>
+                            <VerticalAlign>Middle</VerticalAlign>
+                            <PaddingLeft>2pt</PaddingLeft>
+                            <PaddingRight>2pt</PaddingRight>
+                            <PaddingTop>2pt</PaddingTop>
+                            <PaddingBottom>2pt</PaddingBottom>
+                          </Style>
+                        </Textbox>
+                      </CellContents>
+                    </TablixCell>
+                    <TablixCell>
+                      <CellContents>
+                        <Textbox Name="Textbox19">
+                          <rd:DefaultName>Textbox19</rd:DefaultName>
+                          <CanGrow>true</CanGrow>
+                          <KeepTogether>true</KeepTogether>
+                          <Paragraphs>
+                            <Paragraph>
+                              <TextRuns>
+                                <TextRun>
+                                  <Value>Transaction Size</Value>
+                                  <Style>
+                                    <FontFamily>Calibri Light</FontFamily>
+                                    <FontSize>12pt</FontSize>
+                                  </Style>
+                                </TextRun>
+                              </TextRuns>
+                              <Style>
+                                <TextAlign>Center</TextAlign>
+                              </Style>
+                            </Paragraph>
+                          </Paragraphs>
+                          <Style>
+                            <Border>
+                              <Style>Solid</Style>
+                              <Width>0.5pt</Width>
+                            </Border>
+                            <TopBorder>
+                              <Color>Black</Color>
+                              <Style>Solid</Style>
+                              <Width>0.5pt</Width>
+                            </TopBorder>
+                            <BottomBorder>
+                              <Color>Black</Color>
+                              <Style>Solid</Style>
+                              <Width>0.5pt</Width>
+                            </BottomBorder>
+                            <VerticalAlign>Middle</VerticalAlign>
+                            <PaddingLeft>2pt</PaddingLeft>
+                            <PaddingRight>2pt</PaddingRight>
+                            <PaddingTop>2pt</PaddingTop>
+                            <PaddingBottom>2pt</PaddingBottom>
+                          </Style>
+                        </Textbox>
+                      </CellContents>
+                    </TablixCell>
+                    <TablixCell>
+                      <CellContents>
+                        <Textbox Name="Textbox29">
+                          <rd:DefaultName>Textbox29</rd:DefaultName>
+                          <CanGrow>true</CanGrow>
+                          <KeepTogether>true</KeepTogether>
+                          <Paragraphs>
+                            <Paragraph>
+                              <TextRuns>
+                                <TextRun>
+                                  <Value># of Farmers</Value>
+                                  <Style>
+                                    <FontFamily>Calibri Light</FontFamily>
+                                    <FontSize>12pt</FontSize>
+                                  </Style>
+                                </TextRun>
+                              </TextRuns>
+                              <Style>
+                                <TextAlign>Center</TextAlign>
+                              </Style>
+                            </Paragraph>
+                          </Paragraphs>
+                          <Style>
+                            <Border>
+                              <Style>Solid</Style>
+                              <Width>0.5pt</Width>
+                            </Border>
+                            <VerticalAlign>Middle</VerticalAlign>
+                            <PaddingLeft>2pt</PaddingLeft>
+                            <PaddingRight>2pt</PaddingRight>
+                            <PaddingTop>2pt</PaddingTop>
+                            <PaddingBottom>2pt</PaddingBottom>
+                          </Style>
+                        </Textbox>
+                      </CellContents>
+                    </TablixCell>
+                    <TablixCell>
+                      <CellContents>
+                        <Textbox Name="Textbox30">
+                          <rd:DefaultName>Textbox30</rd:DefaultName>
+                          <CanGrow>true</CanGrow>
+                          <KeepTogether>true</KeepTogether>
+                          <Paragraphs>
+                            <Paragraph>
+                              <TextRuns>
+                                <TextRun>
+                                  <Value>Finishers</Value>
+                                  <Style>
+                                    <FontFamily>Calibri Light</FontFamily>
+                                    <FontSize>12pt</FontSize>
+                                  </Style>
+                                </TextRun>
+                              </TextRuns>
+                              <Style>
+                                <TextAlign>Center</TextAlign>
+                              </Style>
+                            </Paragraph>
+                          </Paragraphs>
+                          <Style>
+                            <Border>
+                              <Style>Solid</Style>
+                              <Width>0.5pt</Width>
+                            </Border>
+                            <VerticalAlign>Middle</VerticalAlign>
+                            <PaddingLeft>2pt</PaddingLeft>
+                            <PaddingRight>2pt</PaddingRight>
+                            <PaddingTop>2pt</PaddingTop>
+                            <PaddingBottom>2pt</PaddingBottom>
+                          </Style>
+                        </Textbox>
+                      </CellContents>
+                    </TablixCell>
+                    <TablixCell>
+                      <CellContents>
+                        <Textbox Name="Textbox22">
+                          <rd:DefaultName>Textbox22</rd:DefaultName>
+                          <CanGrow>true</CanGrow>
+                          <KeepTogether>true</KeepTogether>
+                          <Paragraphs>
+                            <Paragraph>
+                              <TextRuns>
+                                <TextRun>
+                                  <Value>% Finishers</Value>
+                                  <Style>
+                                    <FontFamily>Calibri Light</FontFamily>
+                                    <FontSize>12pt</FontSize>
+                                  </Style>
+                                </TextRun>
+                              </TextRuns>
+                              <Style>
+                                <TextAlign>Center</TextAlign>
+                              </Style>
+                            </Paragraph>
+                          </Paragraphs>
+                          <Style>
+                            <Border>
+                              <Style>None</Style>
+                            </Border>
+                            <TopBorder>
+                              <Color>Black</Color>
+                              <Style>Solid</Style>
+                              <Width>0.5pt</Width>
+                            </TopBorder>
+                            <BottomBorder>
+                              <Color>Black</Color>
+                              <Style>Solid</Style>
+                              <Width>0.5pt</Width>
+                            </BottomBorder>
+                            <RightBorder>
+                              <Color>Black</Color>
+                              <Style>Solid</Style>
+                              <Width>0.5pt</Width>
+                            </RightBorder>
+                            <VerticalAlign>Middle</VerticalAlign>
+                            <PaddingLeft>2pt</PaddingLeft>
+                            <PaddingRight>2pt</PaddingRight>
+                            <PaddingTop>2pt</PaddingTop>
+                            <PaddingBottom>2pt</PaddingBottom>
+                          </Style>
+                        </Textbox>
+                      </CellContents>
+                    </TablixCell>
+                    <TablixCell>
+                      <CellContents>
+                        <Textbox Name="Textbox23">
+                          <rd:DefaultName>Textbox23</rd:DefaultName>
+                          <CanGrow>true</CanGrow>
+                          <KeepTogether>true</KeepTogether>
+                          <Paragraphs>
+                            <Paragraph>
+                              <TextRuns>
+                                <TextRun>
+                                  <Value>Average Transaction Size</Value>
+                                  <Style>
+                                    <FontFamily>Calibri Light</FontFamily>
+                                    <FontSize>12pt</FontSize>
+                                  </Style>
+                                </TextRun>
+                              </TextRuns>
+                              <Style>
+                                <TextAlign>Center</TextAlign>
+                              </Style>
+                            </Paragraph>
+                          </Paragraphs>
+                          <Style>
+                            <Border>
+                              <Style>Solid</Style>
+                              <Width>0.5pt</Width>
+                            </Border>
+                            <VerticalAlign>Middle</VerticalAlign>
+                            <PaddingLeft>2pt</PaddingLeft>
+                            <PaddingRight>2pt</PaddingRight>
+                            <PaddingTop>2pt</PaddingTop>
+                            <PaddingBottom>2pt</PaddingBottom>
+                          </Style>
+                        </Textbox>
+                      </CellContents>
+                    </TablixCell>
+                    <TablixCell>
+                      <CellContents>
+                        <Textbox Name="Textbox24">
+                          <rd:DefaultName>Textbox24</rd:DefaultName>
+                          <CanGrow>true</CanGrow>
+                          <KeepTogether>true</KeepTogether>
+                          <Paragraphs>
+                            <Paragraph>
+                              <TextRuns>
+                                <TextRun>
+                                  <Value>Groups</Value>
+                                  <Style>
+                                    <FontFamily>Calibri Light</FontFamily>
+                                    <FontSize>12pt</FontSize>
+                                  </Style>
+                                </TextRun>
+                              </TextRuns>
+                              <Style>
+                                <TextAlign>Center</TextAlign>
+                              </Style>
+                            </Paragraph>
+                          </Paragraphs>
+                          <Style>
+                            <Border>
+                              <Style>Solid</Style>
+                              <Width>0.5pt</Width>
+                            </Border>
+                            <VerticalAlign>Middle</VerticalAlign>
+                            <PaddingLeft>2pt</PaddingLeft>
+                            <PaddingRight>2pt</PaddingRight>
+                            <PaddingTop>2pt</PaddingTop>
+                            <PaddingBottom>2pt</PaddingBottom>
+                          </Style>
+                        </Textbox>
+                      </CellContents>
+                    </TablixCell>
+                    <TablixCell>
+                      <CellContents>
+                        <Textbox Name="Textbox25">
+                          <rd:DefaultName>Textbox25</rd:DefaultName>
+                          <CanGrow>true</CanGrow>
+                          <KeepTogether>true</KeepTogether>
+                          <Paragraphs>
+                            <Paragraph>
+                              <TextRuns>
+                                <TextRun>
+                                  <Value>Group Finishers</Value>
+                                  <Style>
+                                    <FontFamily>Calibri Light</FontFamily>
+                                    <FontSize>12pt</FontSize>
+                                  </Style>
+                                </TextRun>
+                              </TextRuns>
+                              <Style>
+                                <TextAlign>Center</TextAlign>
+                              </Style>
+                            </Paragraph>
+                          </Paragraphs>
+                          <Style>
+                            <Border>
+                              <Style>Solid</Style>
+                              <Width>0.5pt</Width>
+                            </Border>
+                            <VerticalAlign>Middle</VerticalAlign>
+                            <PaddingLeft>2pt</PaddingLeft>
+                            <PaddingRight>2pt</PaddingRight>
+                            <PaddingTop>2pt</PaddingTop>
+                            <PaddingBottom>2pt</PaddingBottom>
+                          </Style>
+                        </Textbox>
+                      </CellContents>
+                    </TablixCell>
+                    <TablixCell>
+                      <CellContents>
+                        <Textbox Name="Textbox26">
+                          <rd:DefaultName>Textbox26</rd:DefaultName>
+                          <CanGrow>true</CanGrow>
+                          <KeepTogether>true</KeepTogether>
+                          <Paragraphs>
+                            <Paragraph>
+                              <TextRuns>
+                                <TextRun>
+                                  <Value>% Group Finishers</Value>
+                                  <Style>
+                                    <FontFamily>Calibri Light</FontFamily>
+                                    <FontSize>12pt</FontSize>
+                                  </Style>
+                                </TextRun>
+                              </TextRuns>
+                              <Style>
+                                <TextAlign>Center</TextAlign>
+                              </Style>
+                            </Paragraph>
+                          </Paragraphs>
+                          <Style>
+                            <Border>
+                              <Style>Solid</Style>
+                              <Width>0.5pt</Width>
+                            </Border>
+                            <VerticalAlign>Middle</VerticalAlign>
+                            <PaddingLeft>2pt</PaddingLeft>
+                            <PaddingRight>2pt</PaddingRight>
+                            <PaddingTop>2pt</PaddingTop>
+                            <PaddingBottom>2pt</PaddingBottom>
+                          </Style>
+                        </Textbox>
+                      </CellContents>
+                    </TablixCell>
+                  </TablixCells>
+                </TablixRow>
+                <TablixRow>
+                  <Height>0.25in</Height>
+                  <TablixCells>
+                    <TablixCell>
+                      <CellContents>
+                        <Textbox Name="SiteName">
+                          <rd:DefaultName>SiteName</rd:DefaultName>
+                          <CanGrow>true</CanGrow>
+                          <KeepTogether>true</KeepTogether>
+                          <Paragraphs>
+                            <Paragraph>
+                              <TextRuns>
+                                <TextRun>
+                                  <Value>=Fields!SiteName.Value</Value>
+                                  <Style>
+                                    <FontFamily>Calibri Light</FontFamily>
+                                    <FontSize>12pt</FontSize>
+                                  </Style>
+                                </TextRun>
+                              </TextRuns>
+                              <Style>
+                                <TextAlign>Right</TextAlign>
+                              </Style>
+                            </Paragraph>
+                          </Paragraphs>
+                          <Style>
+                            <Border>
+                              <Style>Solid</Style>
+                              <Width>0.5pt</Width>
+                            </Border>
+                            <VerticalAlign>Bottom</VerticalAlign>
+                            <PaddingLeft>2pt</PaddingLeft>
+                            <PaddingRight>2pt</PaddingRight>
+                            <PaddingTop>2pt</PaddingTop>
+                            <PaddingBottom>2pt</PaddingBottom>
+                          </Style>
+                        </Textbox>
+                      </CellContents>
+                    </TablixCell>
+                    <TablixCell>
+                      <CellContents>
+                        <Textbox Name="Repaid">
+                          <rd:DefaultName>Repaid</rd:DefaultName>
+                          <CanGrow>true</CanGrow>
+                          <KeepTogether>true</KeepTogether>
+                          <Paragraphs>
+                            <Paragraph>
+                              <TextRuns>
+                                <TextRun>
+                                  <Value>=Sum(Fields!Repaid.Value)/Sum(Fields!TotalCredit.Value)</Value>
+                                  <Style>
+                                    <FontFamily>Calibri Light</FontFamily>
+                                    <FontSize>12pt</FontSize>
+                                    <Format>0.00%</Format>
+                                  </Style>
+                                </TextRun>
+                              </TextRuns>
+                              <Style>
+                                <TextAlign>Right</TextAlign>
+                              </Style>
+                            </Paragraph>
+                          </Paragraphs>
+                          <Style>
+                            <Border>
+                              <Style>Solid</Style>
+                              <Width>0.5pt</Width>
+                            </Border>
+                            <VerticalAlign>Bottom</VerticalAlign>
+                            <PaddingLeft>2pt</PaddingLeft>
+                            <PaddingRight>2pt</PaddingRight>
+                            <PaddingTop>2pt</PaddingTop>
+                            <PaddingBottom>2pt</PaddingBottom>
+                          </Style>
+                        </Textbox>
+                      </CellContents>
+                    </TablixCell>
+                    <TablixCell>
+                      <CellContents>
+                        <Textbox Name="TotalCredit">
+                          <rd:DefaultName>TotalCredit</rd:DefaultName>
+                          <CanGrow>true</CanGrow>
+                          <KeepTogether>true</KeepTogether>
+                          <Paragraphs>
+                            <Paragraph>
+                              <TextRuns>
+                                <TextRun>
+                                  <Value>=Sum(Fields!TotalCredit.Value)</Value>
+                                  <Style>
+                                    <FontFamily>Calibri Light</FontFamily>
+                                    <FontSize>12pt</FontSize>
+                                    <Format>#,0;(#,0)</Format>
+                                  </Style>
+                                </TextRun>
+                              </TextRuns>
+                              <Style>
+                                <TextAlign>Right</TextAlign>
+                              </Style>
+                            </Paragraph>
+                          </Paragraphs>
+                          <Style>
+                            <Border>
+                              <Style>Solid</Style>
+                              <Width>0.5pt</Width>
+                            </Border>
+                            <VerticalAlign>Bottom</VerticalAlign>
+                            <PaddingLeft>2pt</PaddingLeft>
+                            <PaddingRight>2pt</PaddingRight>
+                            <PaddingTop>2pt</PaddingTop>
+                            <PaddingBottom>2pt</PaddingBottom>
+                          </Style>
+                        </Textbox>
+                      </CellContents>
+                    </TablixCell>
+                    <TablixCell>
+                      <CellContents>
+                        <Textbox Name="Finishers">
+                          <rd:DefaultName>Finishers</rd:DefaultName>
+                          <CanGrow>true</CanGrow>
+                          <KeepTogether>true</KeepTogether>
+                          <Paragraphs>
+                            <Paragraph>
+                              <TextRuns>
+                                <TextRun>
+                                  <Value>=Sum(Fields!Farmers.Value)</Value>
+                                  <Style>
+                                    <FontFamily>Calibri Light</FontFamily>
+                                    <FontSize>12pt</FontSize>
+                                  </Style>
+                                </TextRun>
+                              </TextRuns>
+                              <Style>
+                                <TextAlign>Center</TextAlign>
+                              </Style>
+                            </Paragraph>
+                          </Paragraphs>
+                          <Style>
+                            <Border>
+                              <Style>Solid</Style>
+                              <Width>0.5pt</Width>
+                            </Border>
+                            <VerticalAlign>Middle</VerticalAlign>
+                            <PaddingLeft>2pt</PaddingLeft>
+                            <PaddingRight>2pt</PaddingRight>
+                            <PaddingTop>2pt</PaddingTop>
+                            <PaddingBottom>2pt</PaddingBottom>
+                          </Style>
+                        </Textbox>
+                      </CellContents>
+                    </TablixCell>
+                    <TablixCell>
+                      <CellContents>
+                        <Textbox Name="Finishers1">
+                          <rd:DefaultName>Finishers1</rd:DefaultName>
+                          <CanGrow>true</CanGrow>
+                          <KeepTogether>true</KeepTogether>
+                          <Paragraphs>
+                            <Paragraph>
+                              <TextRuns>
+                                <TextRun>
+                                  <Value>=IIF(Sum(Fields!Finishers.Value)=0,0,Sum(Fields!Finishers.Value))</Value>
+                                  <Style>
+                                    <FontFamily>Calibri Light</FontFamily>
+                                    <FontSize>12pt</FontSize>
+                                    <Format>0;(0)</Format>
+                                  </Style>
+                                </TextRun>
+                              </TextRuns>
+                              <Style>
+                                <TextAlign>Center</TextAlign>
+                              </Style>
+                            </Paragraph>
+                          </Paragraphs>
+                          <Style>
+                            <Border>
+                              <Style>Solid</Style>
+                              <Width>0.5pt</Width>
+                            </Border>
+                            <VerticalAlign>Middle</VerticalAlign>
+                            <PaddingLeft>2pt</PaddingLeft>
+                            <PaddingRight>2pt</PaddingRight>
+                            <PaddingTop>2pt</PaddingTop>
+                            <PaddingBottom>2pt</PaddingBottom>
+                          </Style>
+                        </Textbox>
+                      </CellContents>
+                    </TablixCell>
+                    <TablixCell>
+                      <CellContents>
+                        <Textbox Name="Textbox11">
+                          <rd:DefaultName>Textbox4</rd:DefaultName>
+                          <CanGrow>true</CanGrow>
+                          <KeepTogether>true</KeepTogether>
+                          <Paragraphs>
+                            <Paragraph>
+                              <TextRuns>
+                                <TextRun>
+                                  <Value>=Sum(Fields!Finishers.Value)/SUM(Fields!Farmers.Value)</Value>
+                                  <Style>
+                                    <FontFamily>Calibri Light</FontFamily>
+                                    <FontSize>12pt</FontSize>
+                                    <FontWeight>Normal</FontWeight>
+                                    <Format>0.00%</Format>
+                                  </Style>
+                                </TextRun>
+                              </TextRuns>
+                              <Style>
+                                <TextAlign>Center</TextAlign>
+                              </Style>
+                            </Paragraph>
+                          </Paragraphs>
+                          <Style>
+                            <Border>
+                              <Style>Solid</Style>
+                              <Width>0.5pt</Width>
+                            </Border>
+                            <VerticalAlign>Middle</VerticalAlign>
+                            <PaddingLeft>2pt</PaddingLeft>
+                            <PaddingRight>2pt</PaddingRight>
+                            <PaddingTop>2pt</PaddingTop>
+                            <PaddingBottom>2pt</PaddingBottom>
+                          </Style>
+                        </Textbox>
+                      </CellContents>
+                    </TablixCell>
+                    <TablixCell>
+                      <CellContents>
+                        <Textbox Name="TotalCredit1">
+                          <rd:DefaultName>TotalCredit1</rd:DefaultName>
+                          <CanGrow>true</CanGrow>
+                          <KeepTogether>true</KeepTogether>
+                          <Paragraphs>
+                            <Paragraph>
+                              <TextRuns>
+                                <TextRun>
+                                  <Value>=Sum(Fields!TotalCredit.Value)/Sum(Fields!Farmers.Value)</Value>
+                                  <Style>
+                                    <FontFamily>Calibri Light</FontFamily>
+                                    <FontSize>12pt</FontSize>
+                                    <FontWeight>Normal</FontWeight>
+                                    <Format>#,0;(#,0)</Format>
+                                  </Style>
+                                </TextRun>
+                              </TextRuns>
+                              <Style>
+                                <TextAlign>Center</TextAlign>
+                              </Style>
+                            </Paragraph>
+                          </Paragraphs>
+                          <Style>
+                            <Border>
+                              <Style>Solid</Style>
+                              <Width>0.5pt</Width>
+                            </Border>
+                            <VerticalAlign>Middle</VerticalAlign>
+                            <PaddingLeft>2pt</PaddingLeft>
+                            <PaddingRight>2pt</PaddingRight>
+                            <PaddingTop>2pt</PaddingTop>
+                            <PaddingBottom>2pt</PaddingBottom>
+                          </Style>
+                        </Textbox>
+                      </CellContents>
+                    </TablixCell>
+                    <TablixCell>
+                      <CellContents>
+                        <Textbox Name="grps">
+                          <rd:DefaultName>grps</rd:DefaultName>
+                          <CanGrow>true</CanGrow>
+                          <KeepTogether>true</KeepTogether>
+                          <Paragraphs>
+                            <Paragraph>
+                              <TextRuns>
+                                <TextRun>
+                                  <Value>=Fields!grps.Value</Value>
+                                  <Style>
+                                    <FontFamily>Calibri Light</FontFamily>
+                                    <FontSize>12pt</FontSize>
+                                    <FontWeight>Normal</FontWeight>
+                                  </Style>
+                                </TextRun>
+                              </TextRuns>
+                              <Style>
+                                <TextAlign>Center</TextAlign>
+                              </Style>
+                            </Paragraph>
+                          </Paragraphs>
+                          <Style>
+                            <Border>
+                              <Style>Solid</Style>
+                              <Width>0.5pt</Width>
+                            </Border>
+                            <VerticalAlign>Middle</VerticalAlign>
+                            <PaddingLeft>2pt</PaddingLeft>
+                            <PaddingRight>2pt</PaddingRight>
+                            <PaddingTop>2pt</PaddingTop>
+                            <PaddingBottom>2pt</PaddingBottom>
+                          </Style>
+                        </Textbox>
+                      </CellContents>
+                    </TablixCell>
+                    <TablixCell>
+                      <CellContents>
+                        <Textbox Name="CompletedGroupsCount">
+                          <rd:DefaultName>CompletedGroupsCount</rd:DefaultName>
+                          <CanGrow>true</CanGrow>
+                          <KeepTogether>true</KeepTogether>
+                          <Paragraphs>
+                            <Paragraph>
+                              <TextRuns>
+                                <TextRun>
+                                  <Value>=Sum(Fields!CompletedGroupsCount.Value)</Value>
+                                  <Style>
+                                    <FontFamily>Calibri Light</FontFamily>
+                                    <FontSize>12pt</FontSize>
+                                    <FontWeight>Normal</FontWeight>
+                                  </Style>
+                                </TextRun>
+                              </TextRuns>
+                              <Style>
+                                <TextAlign>Center</TextAlign>
+                              </Style>
+                            </Paragraph>
+                          </Paragraphs>
+                          <Style>
+                            <Border>
+                              <Style>Solid</Style>
+                              <Width>0.5pt</Width>
+                            </Border>
+                            <VerticalAlign>Middle</VerticalAlign>
+                            <PaddingLeft>2pt</PaddingLeft>
+                            <PaddingRight>2pt</PaddingRight>
+                            <PaddingTop>2pt</PaddingTop>
+                            <PaddingBottom>2pt</PaddingBottom>
+                          </Style>
+                        </Textbox>
+                      </CellContents>
+                    </TablixCell>
+                    <TablixCell>
+                      <CellContents>
+                        <Textbox Name="CompletedGroupsCount1">
+                          <rd:DefaultName>CompletedGroupsCount1</rd:DefaultName>
+                          <CanGrow>true</CanGrow>
+                          <KeepTogether>true</KeepTogether>
+                          <Paragraphs>
+                            <Paragraph>
+                              <TextRuns>
+                                <TextRun>
+                                  <Value>=Sum(Fields!CompletedGroupsCount.Value)/Sum(Fields!grps.Value)</Value>
+                                  <Style>
+                                    <FontFamily>Calibri Light</FontFamily>
+                                    <FontSize>12pt</FontSize>
+                                    <FontWeight>Normal</FontWeight>
+                                    <Format>0.00%</Format>
+                                  </Style>
+                                </TextRun>
+                              </TextRuns>
+                              <Style>
+                                <TextAlign>Center</TextAlign>
+                              </Style>
+                            </Paragraph>
+                          </Paragraphs>
+                          <Style>
+                            <Border>
+                              <Style>Solid</Style>
+                              <Width>0.5pt</Width>
+                            </Border>
+                            <VerticalAlign>Middle</VerticalAlign>
+                            <PaddingLeft>2pt</PaddingLeft>
+                            <PaddingRight>2pt</PaddingRight>
+                            <PaddingTop>2pt</PaddingTop>
+                            <PaddingBottom>2pt</PaddingBottom>
+                          </Style>
+                        </Textbox>
+                      </CellContents>
+                    </TablixCell>
+                  </TablixCells>
+                </TablixRow>
+              </TablixRows>
+            </TablixBody>
+            <TablixColumnHierarchy>
+              <TablixMembers>
+                <TablixMember />
+                <TablixMember />
+                <TablixMember />
+                <TablixMember />
+                <TablixMember />
+                <TablixMember />
+                <TablixMember />
+                <TablixMember />
+                <TablixMember />
+                <TablixMember />
+              </TablixMembers>
+            </TablixColumnHierarchy>
+            <TablixRowHierarchy>
+              <TablixMembers>
+                <TablixMember />
+                <TablixMember>
+                  <TablixMembers>
+                    <TablixMember>
+                      <Group Name="SiteName">
+                        <GroupExpressions>
+                          <GroupExpression>=Fields!SiteName.Value</GroupExpression>
+                        </GroupExpressions>
+                      </Group>
+                      <SortExpressions>
+                        <SortExpression>
+                          <Value>=Fields!SiteName.Value</Value>
+                        </SortExpression>
+                      </SortExpressions>
+                    </TablixMember>
+                  </TablixMembers>
+                </TablixMember>
+              </TablixMembers>
+            </TablixRowHierarchy>
+            <KeepTogether>true</KeepTogether>
+            <DataSetName>RepaymentDashboardDatasource</DataSetName>
+            <Height>0.91in</Height>
+            <Width>10.78737in</Width>
+            <Style>
+              <Border>
+                <Style>None</Style>
+              </Border>
+            </Style>
+          </Tablix>
+        </ReportItems>
+        <Height>7.65875in</Height>
+        <Style>
+          <Border>
+            <Style>None</Style>
+          </Border>
+        </Style>
+      </Body>
+      <Width>10.83639in</Width>
+      <Page>
+        <PageHeight>11.69in</PageHeight>
+        <PageWidth>16.54in</PageWidth>
+        <LeftMargin>0.5in</LeftMargin>
+        <RightMargin>0.5in</RightMargin>
+        <TopMargin>0.5in</TopMargin>
+        <BottomMargin>0.5in</BottomMargin>
+        <Style />
+      </Page>
+    </ReportSection>
+  </ReportSections>
+  <ReportParameters>
+    <ReportParameter Name="Season">
+      <DataType>String</DataType>
+      <Prompt>Season</Prompt>
+      <ValidValues>
+        <ParameterValues>
+          <ParameterValue>
+            <Value>2021, Long Rain</Value>
+            <Label>2021, Long Rain</Label>
+          </ParameterValue>
+          <ParameterValue>
+            <Value>2022, Long Rain</Value>
+            <Label>2022, Long Rain</Label>
+          </ParameterValue>
+          <ParameterValue>
+            <Value>2023, Long Rain</Value>
+            <Label>2023, Long Rain</Label>
+          </ParameterValue>
+        </ParameterValues>
+      </ValidValues>
+    </ReportParameter>
+  </ReportParameters>
+  <ReportParametersLayout>
+    <GridLayoutDefinition>
+      <NumberOfColumns>1</NumberOfColumns>
+      <NumberOfRows>1</NumberOfRows>
+      <CellDefinitions>
+        <CellDefinition>
+          <ColumnIndex>0</ColumnIndex>
+          <RowIndex>0</RowIndex>
+          <ParameterName>Season</ParameterName>
+        </CellDefinition>
+      </CellDefinitions>
+    </GridLayoutDefinition>
+  </ReportParametersLayout>
+  <EmbeddedImages>
+    <EmbeddedImage Name="OAFLogo">
+      <MIMEType>image/png</MIMEType>
+      <ImageData>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</ImageData>
+    </EmbeddedImage>
+  </EmbeddedImages>
+</Report>

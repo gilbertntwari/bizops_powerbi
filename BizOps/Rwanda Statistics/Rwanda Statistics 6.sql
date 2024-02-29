@@ -1,0 +1,1 @@
+select LocationID as DimDistrictId, LocationName As DistrictName, RegionName from DimLocations Where CountryId = 2

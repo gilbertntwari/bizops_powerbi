@@ -1,0 +1,1690 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Report xmlns="http://schemas.microsoft.com/sqlserver/reporting/2016/01/reportdefinition" xmlns:rd="http://schemas.microsoft.com/SQLServer/reporting/reportdesigner">
+  <rd:ReportUnitType>Inch</rd:ReportUnitType>
+  <rd:ReportID>01376c65-a942-4dfc-ae20-5aeb0eed9334</rd:ReportID>
+  <AutoRefresh>0</AutoRefresh>
+  <DataSources>
+    <DataSource Name="RosterDataWarehouse">
+      <rd:SecurityType>DataBase</rd:SecurityType>
+      <ConnectionProperties>
+        <DataProvider>SQL</DataProvider>
+        <ConnectString>Data Source=mtama.oneacrefund.org,6543;Initial Catalog=RosterDataWarehouse</ConnectString>
+        <Prompt>Specify a user name and password for data source RepaymentDashboardDatasource:</Prompt>
+      </ConnectionProperties>
+      <rd:DataSourceID>219d9ccc-9079-432f-8f64-ae0ca9ab7816</rd:DataSourceID>
+    </DataSource>
+  </DataSources>
+  <DataSets>
+    <DataSet Name="RepaymentDashboardDatasource">
+      <Query>
+        <DataSourceName>RosterDataWarehouse</DataSourceName>
+        <QueryParameters>
+          <QueryParameter Name="@EndDate">
+            <Value>=Parameters!EndDate.Value</Value>
+          </QueryParameter>
+        </QueryParameters>
+        <CommandText>Use RosterDataWarehouse;
+
+IF OBJECT_ID('tempdb..#VR') IS NOT NULL
+DROP TABLE #VR;
+
+-- Create a table with summarized Repayment data at the client level from VR
+CREATE TABLE #VR (
+	-- Name and format the columns in the table
+	ClientID int,
+	RepaymentSum int
+)
+-- Now add values into the table
+INSERT INTO #VR (ClientID,RepaymentSum)
+SELECT DimClientID as ClientID, SUM(Amount) AS RepaymentSum
+	FROM v_RepaymentBasic
+	WHERE 
+		RepaidDate BETWEEN '2022-03-04' AND @EndDate AND
+		CountryName = 'Nigeria' AND
+		SeasonName = '2022, Long Rain'
+	GROUP BY DimClientID
+;
+
+-- Create a temporary table with Last Year Repayment data from when repayment started to where we are at IN 2021
+IF OBJECT_ID('tempdb..#LST') IS NOT NULL
+DROP TABLE #LST;
+
+
+	CREATE TABLE #LST (
+		-- Name and format the columns in the table
+		FarmerID int,
+		TtlRpdSum int
+	)
+	-- Now add values into the table
+	INSERT INTO #LST (FarmerID,TtlRpdSum)
+	SELECT 
+	DimClientID as FarmerID, SUM(Amount) AS TtlRpdSum
+		FROM v_RepaymentBasic
+		WHERE 
+			RepaidDate BETWEEN '2021-03-16' AND DATEADD(year, -1, @EndDate)  AND
+			CountryName = 'Nigeria' AND
+			SeasonName = '2021, Long Rain'
+		GROUP BY DimClientID
+-------------------------------------------------------
+IF OBJECT_ID('tempdb..#LSTC') IS NOT NULL
+DROP TABLE #LSTC;
+
+--- Calculate the total credit for each client from last year
+	CREATE TABLE #LSTC (
+		FarmerIDs int,
+		TtlCrdtSum int
+	)
+	-- Now add values into the table
+	INSERT INTO #LSTC (FarmerIDS,TtlCrdtSum)
+	SELECT 
+	DimClientID as FarmerIDs, SUM(TotalCredit) AS tlCrdtSum
+		FROM v_ClientSalesBizops
+		WHERE 
+			CountryName = 'Nigeria' AND
+			Season = '2021, Long Rain'
+		GROUP BY DimClientID
+;
+
+----------------------------------------------------------------
+-- 2020 Repayment Data
+IF OBJECT_ID('tempdb..#LST20') IS NOT NULL
+DROP TABLE #LST20;
+
+
+	CREATE TABLE #LST20 (
+		-- Name and format the columns in the table
+		FarmerID20 int,
+		TtlRpdSum20 int
+	)
+	-- Now add values into the table
+	INSERT INTO #LST20 (FarmerID20,TtlRpdSum20)
+	SELECT 
+	DimClientID as FarmerID20, SUM(Amount) AS TtlRpdSum20
+		FROM v_RepaymentBasic
+		WHERE 
+			RepaidDate BETWEEN '2020-01-05' AND DATEADD(year, -2, @EndDate)  AND
+			CountryName = 'Nigeria' AND
+			SeasonName = '2020, Long Rain'
+		GROUP BY DimClientID
+
+
+---------------------------------------------------------------
+--- Calculate the total credit for each client from 2020
+IF OBJECT_ID('tempdb..#LSCL20') IS NOT NULL
+DROP TABLE #LSCL20;
+
+--- Calculate total clients 2020
+	CREATE TABLE #LSCL20 (
+		DimSiteID20 int,
+		TtlClientSum20 int,
+		Finishers2020 int,
+	)
+	-- Now add values into the table
+	INSERT INTO #LSCL20 (DimSiteID20,TtlClientSum20, Finishers2020)
+	SELECT 
+	DimSiteID as SiteIDs20, Count(DimClientID) AS TtlClientSum20, Sum(Case when PercentRepaid = 1 then 1 else 0 end) as Finshers2020
+		FROM v_ClientSalesBizops
+		WHERE 
+			CountryName = 'Nigeria' AND
+			Season = '2020, Long Rain'
+	
+		GROUP BY DimSiteID
+
+-------------------------------------------------
+-- Calculate the total credit for each client from last year
+IF OBJECT_ID('tempdb..#LSTC20') IS NOT NULL
+DROP TABLE #LSTC20;
+
+--- Calculate the total credit for each client from last year
+	CREATE TABLE #LSTC20 (
+		FarmerIDs20 int,
+		TtlCrdtSum20 int
+	)
+	-- Now add values into the table
+	INSERT INTO #LSTC20 (FarmerIDS20,TtlCrdtSum20)
+	SELECT 
+	DimClientID as FarmerIDs20, SUM(TotalCredit) AS tlCrdtSum20
+		FROM v_ClientSalesBizops
+		WHERE 
+			CountryName = 'Nigeria' AND
+			Season = '2020, Long Rain'
+		GROUP BY DimClientID
+;
+
+-------------------------------------------------
+
+IF OBJECT_ID('tempdb..#LSCL') IS NOT NULL
+DROP TABLE #LSCL;
+
+--- Calculate the total credit for each client from last year
+	CREATE TABLE #LSCL (
+		DimSiteID int,
+		TtlClientSum int
+	)
+	-- Now add values into the table
+	INSERT INTO #LSCL (DimSiteID,TtlClientSum)
+	SELECT 
+	DimSiteID as SiteIDs, Count(DimClientID) AS TtlClientSum
+		FROM v_ClientSalesBizops
+		WHERE 
+			CountryName = 'Nigeria' AND
+			Season = '2021, Long Rain'
+		GROUP BY DimSiteID
+
+
+
+SELECT 
+	SC.CountryName
+	,SC.SectorName
+	,SC.DistrictName
+	,SC.SiteName
+	,SC.GroupName
+	,SC.DimClientID
+	,SC.FirstName
+	,SC.LastName
+	,SC.TotalCredit 
+	,SC.TotalRepaid 
+	,SC.PercentRepaid
+	,ISNULL(VR.RepaymentSum,0) as AMOUNT
+	,ISNULL(LST.TtlRpdSum,0) AS TtlRpdLastYR
+     ,ISNULL(LSTC.TtlCrdtSum,0) AS LstYrCredt
+	 ,Case When ISNULL(LST.TtlRpdSum,0) &gt;0 and ISNULL(LST.TtlRpdSum,0)&gt;= ISNULL(LSTC.TtlCrdtSum,0) then 1 else 0 end as [2021Finishers] 
+	 ,Case when ISNULL(VR.RepaymentSum,0)&gt;= TotalCredit then 1 else 0 end as Finishers
+	 ,LSCL.TtlClientSum
+	 ,LSCL20.TtlClientSum20
+	 ,LSCL20.Finishers2020
+	 ,LSTC20.TtlCrdtSum20
+	 ,LST20.TtlRpdSum20
+
+
+
+FROM v_ClientSalesBizops AS SC
+	LEFT JOIN #VR AS VR ON
+		SC.DimClientID=VR.ClientID	
+		LEFT JOIN #LST AS LST ON
+		SC.DimClientID=LST.FarmerID
+        LEFT JOIN #LSTC AS LSTC ON
+		SC.DimClientID=LSTC.FarmerIDs
+		Left join #LSCL AS LSCL ON
+		SC.DimSiteID=LSCL.DimSiteID
+		Left Join #LSTC20 AS LSTC20 ON
+		SC.DimClientID=LSTC20.FarmerIDs20
+		Left Join #LSCL20 AS LSCL20 ON 
+		SC.DimClientID=LSCL20.TtlClientSum20
+		Left Join #LST20 as LST20 ON
+		SC.DimClientID=LST20.FarmerID20
+		
+		
+WHERE 
+	SC.CountryName = 'Nigeria'
+	AND SC.Season = '2022, Long Rain' 
+                AND SC.TotalCredit &gt; 0
+
+
+ORDER BY SC.DistrictName, SC.SiteName ASC
+-- Drop tables	
+DROP TABLE #VR;
+DROP TABLE #LST;
+DROP TABLE #LSTC;
+Drop Table #LSCL;
+Drop Table #LSTC20;
+Drop Table #LSCL20;
+</CommandText>
+      </Query>
+      <Fields>
+        <Field Name="CountryName">
+          <rd:TypeName>System.String</rd:TypeName>
+          <DataField>CountryName</DataField>
+        </Field>
+        <Field Name="SectorName">
+          <rd:TypeName>System.String</rd:TypeName>
+          <DataField>SectorName</DataField>
+        </Field>
+        <Field Name="DistrictName">
+          <rd:TypeName>System.String</rd:TypeName>
+          <DataField>DistrictName</DataField>
+        </Field>
+        <Field Name="SiteName">
+          <rd:TypeName>System.String</rd:TypeName>
+          <DataField>SiteName</DataField>
+        </Field>
+        <Field Name="GroupName">
+          <rd:TypeName>System.String</rd:TypeName>
+          <DataField>GroupName</DataField>
+        </Field>
+        <Field Name="DimClientID">
+          <rd:TypeName>System.Int32</rd:TypeName>
+          <DataField>DimClientID</DataField>
+        </Field>
+        <Field Name="FirstName">
+          <rd:TypeName>System.String</rd:TypeName>
+          <DataField>FirstName</DataField>
+        </Field>
+        <Field Name="LastName">
+          <rd:TypeName>System.String</rd:TypeName>
+          <DataField>LastName</DataField>
+        </Field>
+        <Field Name="TotalCredit">
+          <rd:TypeName>System.Decimal</rd:TypeName>
+          <DataField>TotalCredit</DataField>
+        </Field>
+        <Field Name="TotalRepaid">
+          <rd:TypeName>System.Decimal</rd:TypeName>
+          <DataField>TotalRepaid</DataField>
+        </Field>
+        <Field Name="PercentRepaid">
+          <rd:TypeName>System.Decimal</rd:TypeName>
+          <DataField>PercentRepaid</DataField>
+        </Field>
+        <Field Name="AMOUNT">
+          <rd:TypeName>System.Int32</rd:TypeName>
+          <DataField>AMOUNT</DataField>
+        </Field>
+        <Field Name="TtlRpdLastYR">
+          <rd:TypeName>System.Int32</rd:TypeName>
+          <DataField>TtlRpdLastYR</DataField>
+        </Field>
+        <Field Name="LstYrCredt">
+          <rd:TypeName>System.Int32</rd:TypeName>
+          <DataField>LstYrCredt</DataField>
+        </Field>
+        <Field Name="ID2021Finishers">
+          <rd:TypeName>System.Int32</rd:TypeName>
+          <DataField>2021Finishers</DataField>
+        </Field>
+        <Field Name="Finishers">
+          <rd:TypeName>System.Int32</rd:TypeName>
+          <DataField>Finishers</DataField>
+        </Field>
+        <Field Name="TtlClientSum">
+          <rd:TypeName>System.Int32</rd:TypeName>
+          <DataField>TtlClientSum</DataField>
+        </Field>
+        <Field Name="TtlClientSum20">
+          <rd:TypeName>System.Int32</rd:TypeName>
+          <DataField>TtlClientSum20</DataField>
+        </Field>
+        <Field Name="Finishers2020">
+          <rd:TypeName>System.Int32</rd:TypeName>
+          <DataField>Finishers2020</DataField>
+        </Field>
+        <Field Name="TtlCrdtSum20">
+          <rd:TypeName>System.Int32</rd:TypeName>
+          <DataField>TtlCrdtSum20</DataField>
+        </Field>
+        <Field Name="TtlRpdSum20">
+          <rd:TypeName>System.Int32</rd:TypeName>
+          <DataField>TtlRpdSum20</DataField>
+        </Field>
+      </Fields>
+    </DataSet>
+  </DataSets>
+  <ReportSections>
+    <ReportSection>
+      <Body>
+        <ReportItems>
+          <Tablix Name="Tablix4">
+            <TablixBody>
+              <TablixColumns>
+                <TablixColumn>
+                  <Width>0.83611in</Width>
+                </TablixColumn>
+                <TablixColumn>
+                  <Width>0.49583in</Width>
+                </TablixColumn>
+                <TablixColumn>
+                  <Width>1.23611in</Width>
+                </TablixColumn>
+                <TablixColumn>
+                  <Width>1.18458in</Width>
+                </TablixColumn>
+                <TablixColumn>
+                  <Width>1.1325in</Width>
+                </TablixColumn>
+                <TablixColumn>
+                  <Width>1in</Width>
+                </TablixColumn>
+                <TablixColumn>
+                  <Width>1.15333in</Width>
+                </TablixColumn>
+                <TablixColumn>
+                  <Width>1.21375in</Width>
+                </TablixColumn>
+                <TablixColumn>
+                  <Width>1.17in</Width>
+                </TablixColumn>
+                <TablixColumn>
+                  <Width>1.69792in</Width>
+                </TablixColumn>
+                <TablixColumn>
+                  <Width>1.17875in</Width>
+                </TablixColumn>
+              </TablixColumns>
+              <TablixRows>
+                <TablixRow>
+                  <Height>0.25in</Height>
+                  <TablixCells>
+                    <TablixCell>
+                      <CellContents>
+                        <Textbox Name="Textbox1">
+                          <rd:DefaultName>Textbox1</rd:DefaultName>
+                          <CanGrow>true</CanGrow>
+                          <KeepTogether>true</KeepTogether>
+                          <Paragraphs>
+                            <Paragraph>
+                              <TextRuns>
+                                <TextRun>
+                                  <Value>District Name</Value>
+                                  <Style>
+                                    <FontFamily>Calibri Light</FontFamily>
+                                    <FontSize>11pt</FontSize>
+                                    <FontWeight>Bold</FontWeight>
+                                  </Style>
+                                </TextRun>
+                              </TextRuns>
+                              <Style>
+                                <TextAlign>Center</TextAlign>
+                              </Style>
+                            </Paragraph>
+                          </Paragraphs>
+                          <Style>
+                            <Border>
+                              <Style>None</Style>
+                            </Border>
+                            <RightBorder>
+                              <Style>Solid</Style>
+                              <Width>0.5pt</Width>
+                            </RightBorder>
+                            <BackgroundColor>#e9e9e9</BackgroundColor>
+                            <VerticalAlign>Bottom</VerticalAlign>
+                            <PaddingLeft>2pt</PaddingLeft>
+                            <PaddingRight>2pt</PaddingRight>
+                            <PaddingTop>2pt</PaddingTop>
+                            <PaddingBottom>2pt</PaddingBottom>
+                          </Style>
+                        </Textbox>
+                        <ColSpan>2</ColSpan>
+                      </CellContents>
+                    </TablixCell>
+                    <TablixCell />
+                    <TablixCell>
+                      <CellContents>
+                        <Textbox Name="Textbox3">
+                          <rd:DefaultName>Textbox3</rd:DefaultName>
+                          <CanGrow>true</CanGrow>
+                          <KeepTogether>true</KeepTogether>
+                          <Paragraphs>
+                            <Paragraph>
+                              <TextRuns>
+                                <TextRun>
+                                  <Value>SiteName</Value>
+                                  <Style>
+                                    <FontFamily>Calibri Light</FontFamily>
+                                    <FontSize>11pt</FontSize>
+                                    <FontWeight>Bold</FontWeight>
+                                  </Style>
+                                </TextRun>
+                              </TextRuns>
+                              <Style>
+                                <TextAlign>Left</TextAlign>
+                              </Style>
+                            </Paragraph>
+                          </Paragraphs>
+                          <Style>
+                            <Border>
+                              <Style>None</Style>
+                            </Border>
+                            <RightBorder>
+                              <Style>Solid</Style>
+                              <Width>0.5pt</Width>
+                            </RightBorder>
+                            <BackgroundColor>#e9e9e9</BackgroundColor>
+                            <VerticalAlign>Bottom</VerticalAlign>
+                            <PaddingLeft>2pt</PaddingLeft>
+                            <PaddingRight>2pt</PaddingRight>
+                            <PaddingTop>2pt</PaddingTop>
+                            <PaddingBottom>2pt</PaddingBottom>
+                          </Style>
+                        </Textbox>
+                      </CellContents>
+                    </TablixCell>
+                    <TablixCell>
+                      <CellContents>
+                        <Textbox Name="Textbox4">
+                          <rd:DefaultName>Textbox4</rd:DefaultName>
+                          <CanGrow>true</CanGrow>
+                          <KeepTogether>true</KeepTogether>
+                          <Paragraphs>
+                            <Paragraph>
+                              <TextRuns>
+                                <TextRun>
+                                  <Value>% Repaid 2022</Value>
+                                  <Style>
+                                    <FontFamily>Calibri Light</FontFamily>
+                                    <FontSize>11pt</FontSize>
+                                    <FontWeight>Bold</FontWeight>
+                                  </Style>
+                                </TextRun>
+                              </TextRuns>
+                              <Style>
+                                <TextAlign>Center</TextAlign>
+                              </Style>
+                            </Paragraph>
+                          </Paragraphs>
+                          <Style>
+                            <Border>
+                              <Style>None</Style>
+                            </Border>
+                            <BackgroundColor>#e9e9e9</BackgroundColor>
+                            <VerticalAlign>Middle</VerticalAlign>
+                            <PaddingLeft>2pt</PaddingLeft>
+                            <PaddingRight>2pt</PaddingRight>
+                            <PaddingTop>2pt</PaddingTop>
+                            <PaddingBottom>2pt</PaddingBottom>
+                          </Style>
+                        </Textbox>
+                      </CellContents>
+                    </TablixCell>
+                    <TablixCell>
+                      <CellContents>
+                        <Textbox Name="Textbox5">
+                          <rd:DefaultName>Textbox5</rd:DefaultName>
+                          <CanGrow>true</CanGrow>
+                          <KeepTogether>true</KeepTogether>
+                          <Paragraphs>
+                            <Paragraph>
+                              <TextRuns>
+                                <TextRun>
+                                  <Value>% Repaid 2021</Value>
+                                  <Style>
+                                    <FontFamily>Calibri Light</FontFamily>
+                                    <FontSize>11pt</FontSize>
+                                    <FontWeight>Bold</FontWeight>
+                                  </Style>
+                                </TextRun>
+                              </TextRuns>
+                              <Style>
+                                <TextAlign>Center</TextAlign>
+                              </Style>
+                            </Paragraph>
+                          </Paragraphs>
+                          <Style>
+                            <Border>
+                              <Style>None</Style>
+                            </Border>
+                            <RightBorder>
+                              <Style>Solid</Style>
+                              <Width>0.5pt</Width>
+                            </RightBorder>
+                            <BackgroundColor>#e9e9e9</BackgroundColor>
+                            <VerticalAlign>Middle</VerticalAlign>
+                            <PaddingLeft>2pt</PaddingLeft>
+                            <PaddingRight>2pt</PaddingRight>
+                            <PaddingTop>2pt</PaddingTop>
+                            <PaddingBottom>2pt</PaddingBottom>
+                          </Style>
+                        </Textbox>
+                      </CellContents>
+                    </TablixCell>
+                    <TablixCell>
+                      <CellContents>
+                        <Textbox Name="Textbox6">
+                          <rd:DefaultName>Textbox6</rd:DefaultName>
+                          <CanGrow>true</CanGrow>
+                          <KeepTogether>true</KeepTogether>
+                          <Paragraphs>
+                            <Paragraph>
+                              <TextRuns>
+                                <TextRun>
+                                  <Value>Status</Value>
+                                  <Style>
+                                    <FontFamily>Calibri Light</FontFamily>
+                                    <FontSize>11pt</FontSize>
+                                    <FontWeight>Bold</FontWeight>
+                                  </Style>
+                                </TextRun>
+                              </TextRuns>
+                              <Style>
+                                <TextAlign>Center</TextAlign>
+                              </Style>
+                            </Paragraph>
+                          </Paragraphs>
+                          <Style>
+                            <Border>
+                              <Style>None</Style>
+                            </Border>
+                            <RightBorder>
+                              <Style>Solid</Style>
+                              <Width>0.5pt</Width>
+                            </RightBorder>
+                            <BackgroundColor>#e9e9e9</BackgroundColor>
+                            <VerticalAlign>Middle</VerticalAlign>
+                            <PaddingLeft>2pt</PaddingLeft>
+                            <PaddingRight>2pt</PaddingRight>
+                            <PaddingTop>2pt</PaddingTop>
+                            <PaddingBottom>2pt</PaddingBottom>
+                          </Style>
+                        </Textbox>
+                      </CellContents>
+                    </TablixCell>
+                    <TablixCell>
+                      <CellContents>
+                        <Textbox Name="Textbox7">
+                          <rd:DefaultName>Textbox7</rd:DefaultName>
+                          <CanGrow>true</CanGrow>
+                          <KeepTogether>true</KeepTogether>
+                          <Paragraphs>
+                            <Paragraph>
+                              <TextRuns>
+                                <TextRun>
+                                  <Value>2021 Finishers</Value>
+                                  <Style>
+                                    <FontFamily>Calibri Light</FontFamily>
+                                    <FontSize>11pt</FontSize>
+                                    <FontWeight>Bold</FontWeight>
+                                  </Style>
+                                </TextRun>
+                              </TextRuns>
+                              <Style>
+                                <TextAlign>Center</TextAlign>
+                              </Style>
+                            </Paragraph>
+                          </Paragraphs>
+                          <Style>
+                            <Border>
+                              <Style>None</Style>
+                            </Border>
+                            <RightBorder>
+                              <Color>Black</Color>
+                              <Style>Solid</Style>
+                              <Width>0.5pt</Width>
+                            </RightBorder>
+                            <BackgroundColor>#e9e9e9</BackgroundColor>
+                            <VerticalAlign>Middle</VerticalAlign>
+                            <PaddingLeft>2pt</PaddingLeft>
+                            <PaddingRight>2pt</PaddingRight>
+                            <PaddingTop>2pt</PaddingTop>
+                            <PaddingBottom>2pt</PaddingBottom>
+                          </Style>
+                        </Textbox>
+                      </CellContents>
+                    </TablixCell>
+                    <TablixCell>
+                      <CellContents>
+                        <Textbox Name="Textbox8">
+                          <rd:DefaultName>Textbox8</rd:DefaultName>
+                          <CanGrow>true</CanGrow>
+                          <KeepTogether>true</KeepTogether>
+                          <Paragraphs>
+                            <Paragraph>
+                              <TextRuns>
+                                <TextRun>
+                                  <Value>2022 Finishers</Value>
+                                  <Style>
+                                    <FontFamily>Calibri Light</FontFamily>
+                                    <FontSize>11pt</FontSize>
+                                    <FontWeight>Bold</FontWeight>
+                                  </Style>
+                                </TextRun>
+                              </TextRuns>
+                              <Style>
+                                <TextAlign>Center</TextAlign>
+                              </Style>
+                            </Paragraph>
+                          </Paragraphs>
+                          <Style>
+                            <Border>
+                              <Style>None</Style>
+                            </Border>
+                            <BackgroundColor>#e9e9e9</BackgroundColor>
+                            <VerticalAlign>Middle</VerticalAlign>
+                            <PaddingLeft>2pt</PaddingLeft>
+                            <PaddingRight>2pt</PaddingRight>
+                            <PaddingTop>2pt</PaddingTop>
+                            <PaddingBottom>2pt</PaddingBottom>
+                          </Style>
+                        </Textbox>
+                      </CellContents>
+                    </TablixCell>
+                    <TablixCell>
+                      <CellContents>
+                        <Textbox Name="Textbox9">
+                          <rd:DefaultName>Textbox9</rd:DefaultName>
+                          <CanGrow>true</CanGrow>
+                          <KeepTogether>true</KeepTogether>
+                          <Paragraphs>
+                            <Paragraph>
+                              <TextRuns>
+                                <TextRun>
+                                  <Value>2022 Overall %</Value>
+                                  <Style>
+                                    <FontFamily>Calibri Light</FontFamily>
+                                    <FontSize>11pt</FontSize>
+                                    <FontWeight>Bold</FontWeight>
+                                  </Style>
+                                </TextRun>
+                              </TextRuns>
+                              <Style>
+                                <TextAlign>Center</TextAlign>
+                              </Style>
+                            </Paragraph>
+                          </Paragraphs>
+                          <Style>
+                            <Border>
+                              <Style>None</Style>
+                            </Border>
+                            <RightBorder>
+                              <Style>Solid</Style>
+                            </RightBorder>
+                            <BackgroundColor>#e9e9e9</BackgroundColor>
+                            <VerticalAlign>Middle</VerticalAlign>
+                            <PaddingLeft>2pt</PaddingLeft>
+                            <PaddingRight>2pt</PaddingRight>
+                            <PaddingTop>2pt</PaddingTop>
+                            <PaddingBottom>2pt</PaddingBottom>
+                          </Style>
+                        </Textbox>
+                      </CellContents>
+                    </TablixCell>
+                    <TablixCell>
+                      <CellContents>
+                        <Textbox Name="Textbox2">
+                          <rd:DefaultName>Textbox2</rd:DefaultName>
+                          <CanGrow>true</CanGrow>
+                          <KeepTogether>true</KeepTogether>
+                          <Paragraphs>
+                            <Paragraph>
+                              <TextRuns>
+                                <TextRun>
+                                  <Value>2021 Overall Finishers</Value>
+                                  <Style>
+                                    <FontFamily>Calibri Light</FontFamily>
+                                    <FontSize>11pt</FontSize>
+                                    <FontWeight>Bold</FontWeight>
+                                  </Style>
+                                </TextRun>
+                              </TextRuns>
+                              <Style>
+                                <TextAlign>Center</TextAlign>
+                              </Style>
+                            </Paragraph>
+                          </Paragraphs>
+                          <Style>
+                            <Border>
+                              <Style>None</Style>
+                            </Border>
+                            <RightBorder>
+                              <Style>Solid</Style>
+                            </RightBorder>
+                            <BackgroundColor>#e9e9e9</BackgroundColor>
+                            <VerticalAlign>Middle</VerticalAlign>
+                            <PaddingLeft>2pt</PaddingLeft>
+                            <PaddingRight>2pt</PaddingRight>
+                            <PaddingTop>2pt</PaddingTop>
+                            <PaddingBottom>2pt</PaddingBottom>
+                          </Style>
+                        </Textbox>
+                      </CellContents>
+                    </TablixCell>
+                    <TablixCell>
+                      <CellContents>
+                        <Textbox Name="Textbox13">
+                          <rd:DefaultName>Textbox13</rd:DefaultName>
+                          <CanGrow>true</CanGrow>
+                          <KeepTogether>true</KeepTogether>
+                          <Paragraphs>
+                            <Paragraph>
+                              <TextRuns>
+                                <TextRun>
+                                  <Value>2020 Overall Finishers</Value>
+                                  <Style>
+                                    <FontFamily>Calibri Light</FontFamily>
+                                    <FontSize>11pt</FontSize>
+                                    <FontWeight>Bold</FontWeight>
+                                  </Style>
+                                </TextRun>
+                              </TextRuns>
+                              <Style>
+                                <TextAlign>Center</TextAlign>
+                              </Style>
+                            </Paragraph>
+                          </Paragraphs>
+                          <Style>
+                            <Border>
+                              <Style>None</Style>
+                            </Border>
+                            <RightBorder>
+                              <Style>Solid</Style>
+                            </RightBorder>
+                            <BackgroundColor>#e9e9e9</BackgroundColor>
+                            <VerticalAlign>Middle</VerticalAlign>
+                            <PaddingLeft>2pt</PaddingLeft>
+                            <PaddingRight>2pt</PaddingRight>
+                            <PaddingTop>2pt</PaddingTop>
+                            <PaddingBottom>2pt</PaddingBottom>
+                          </Style>
+                        </Textbox>
+                      </CellContents>
+                    </TablixCell>
+                  </TablixCells>
+                </TablixRow>
+                <TablixRow>
+                  <Height>0.25in</Height>
+                  <TablixCells>
+                    <TablixCell>
+                      <CellContents>
+                        <Textbox Name="DistrictName3">
+                          <rd:DefaultName>DistrictName1</rd:DefaultName>
+                          <KeepTogether>true</KeepTogether>
+                          <Paragraphs>
+                            <Paragraph>
+                              <TextRuns>
+                                <TextRun>
+                                  <Value>=Fields!DistrictName.Value</Value>
+                                  <Style>
+                                    <FontFamily>Calibri Light</FontFamily>
+                                    <FontSize>11pt</FontSize>
+                                    <FontWeight>Bold</FontWeight>
+                                  </Style>
+                                </TextRun>
+                              </TextRuns>
+                              <Style>
+                                <TextAlign>Center</TextAlign>
+                              </Style>
+                            </Paragraph>
+                          </Paragraphs>
+                          <Style>
+                            <Border>
+                              <Style>None</Style>
+                            </Border>
+                            <RightBorder>
+                              <Style>Solid</Style>
+                              <Width>0.5pt</Width>
+                            </RightBorder>
+                            <BackgroundColor>#e9e9e9</BackgroundColor>
+                            <VerticalAlign>Bottom</VerticalAlign>
+                            <PaddingLeft>2pt</PaddingLeft>
+                            <PaddingRight>2pt</PaddingRight>
+                            <PaddingTop>2pt</PaddingTop>
+                            <PaddingBottom>2pt</PaddingBottom>
+                          </Style>
+                        </Textbox>
+                        <ColSpan>2</ColSpan>
+                      </CellContents>
+                    </TablixCell>
+                    <TablixCell />
+                    <TablixCell>
+                      <CellContents>
+                        <Textbox Name="Textbox30">
+                          <rd:DefaultName>Textbox30</rd:DefaultName>
+                          <CanGrow>true</CanGrow>
+                          <KeepTogether>true</KeepTogether>
+                          <Paragraphs>
+                            <Paragraph>
+                              <TextRuns>
+                                <TextRun>
+                                  <Value />
+                                  <Style>
+                                    <FontFamily>Calibri Light</FontFamily>
+                                    <FontSize>11pt</FontSize>
+                                    <FontWeight>Bold</FontWeight>
+                                  </Style>
+                                </TextRun>
+                              </TextRuns>
+                              <Style>
+                                <TextAlign>Left</TextAlign>
+                              </Style>
+                            </Paragraph>
+                          </Paragraphs>
+                          <Style>
+                            <Border>
+                              <Style>None</Style>
+                            </Border>
+                            <RightBorder>
+                              <Style>Solid</Style>
+                              <Width>0.5pt</Width>
+                            </RightBorder>
+                            <BackgroundColor>#e9e9e9</BackgroundColor>
+                            <VerticalAlign>Bottom</VerticalAlign>
+                            <PaddingLeft>2pt</PaddingLeft>
+                            <PaddingRight>2pt</PaddingRight>
+                            <PaddingTop>2pt</PaddingTop>
+                            <PaddingBottom>2pt</PaddingBottom>
+                          </Style>
+                        </Textbox>
+                      </CellContents>
+                    </TablixCell>
+                    <TablixCell>
+                      <CellContents>
+                        <Textbox Name="Textbox53">
+                          <rd:DefaultName>Textbox51</rd:DefaultName>
+                          <KeepTogether>true</KeepTogether>
+                          <Paragraphs>
+                            <Paragraph>
+                              <TextRuns>
+                                <TextRun>
+                                  <Value>=Sum(Fields!AMOUNT.Value)/Sum(Fields!TotalCredit.Value)</Value>
+                                  <Style>
+                                    <FontFamily>Calibri Light</FontFamily>
+                                    <FontSize>11pt</FontSize>
+                                    <Format>#,0.00%</Format>
+                                  </Style>
+                                </TextRun>
+                              </TextRuns>
+                              <Style>
+                                <TextAlign>Center</TextAlign>
+                              </Style>
+                            </Paragraph>
+                          </Paragraphs>
+                          <Style>
+                            <Border>
+                              <Style>None</Style>
+                            </Border>
+                            <BackgroundColor>#e9e9e9</BackgroundColor>
+                            <VerticalAlign>Middle</VerticalAlign>
+                            <PaddingLeft>2pt</PaddingLeft>
+                            <PaddingRight>2pt</PaddingRight>
+                            <PaddingTop>2pt</PaddingTop>
+                            <PaddingBottom>2pt</PaddingBottom>
+                          </Style>
+                        </Textbox>
+                      </CellContents>
+                    </TablixCell>
+                    <TablixCell>
+                      <CellContents>
+                        <Textbox Name="Textbox34">
+                          <rd:DefaultName>Textbox34</rd:DefaultName>
+                          <KeepTogether>true</KeepTogether>
+                          <Paragraphs>
+                            <Paragraph>
+                              <TextRuns>
+                                <TextRun>
+                                  <Label>% Repaid</Label>
+                                  <Value>=Sum(Fields!TtlRpdLastYR.Value)/Sum(Fields!LstYrCredt.Value)</Value>
+                                  <Style>
+                                    <FontFamily>Calibri Light</FontFamily>
+                                    <FontSize>11pt</FontSize>
+                                    <Format>0.0%</Format>
+                                  </Style>
+                                </TextRun>
+                              </TextRuns>
+                              <Style>
+                                <TextAlign>Center</TextAlign>
+                              </Style>
+                            </Paragraph>
+                          </Paragraphs>
+                          <Style>
+                            <Border>
+                              <Style>None</Style>
+                            </Border>
+                            <RightBorder>
+                              <Style>Solid</Style>
+                              <Width>0.5pt</Width>
+                            </RightBorder>
+                            <BackgroundColor>#e9e9e9</BackgroundColor>
+                            <VerticalAlign>Middle</VerticalAlign>
+                            <PaddingLeft>2pt</PaddingLeft>
+                            <PaddingRight>2pt</PaddingRight>
+                            <PaddingTop>2pt</PaddingTop>
+                            <PaddingBottom>2pt</PaddingBottom>
+                          </Style>
+                        </Textbox>
+                      </CellContents>
+                    </TablixCell>
+                    <TablixCell>
+                      <CellContents>
+                        <Textbox Name="Textbox73">
+                          <rd:DefaultName>Textbox73</rd:DefaultName>
+                          <CanGrow>true</CanGrow>
+                          <KeepTogether>true</KeepTogether>
+                          <Paragraphs>
+                            <Paragraph>
+                              <TextRuns>
+                                <TextRun>
+                                  <Value>=IIF(Sum(Fields!AMOUNT.Value)/Sum(Fields!TotalCredit.Value)&gt;Sum(Fields!TtlRpdLastYR.Value)/Sum(Fields!LstYrCredt.Value),"Above 2021","Below 2021")</Value>
+                                  <Style>
+                                    <FontFamily>Calibri Light</FontFamily>
+                                    <FontSize>11pt</FontSize>
+                                    <Format>#,0.00%</Format>
+                                  </Style>
+                                </TextRun>
+                              </TextRuns>
+                              <Style>
+                                <TextAlign>Center</TextAlign>
+                              </Style>
+                            </Paragraph>
+                          </Paragraphs>
+                          <Style>
+                            <Border>
+                              <Style>None</Style>
+                            </Border>
+                            <RightBorder>
+                              <Style>Solid</Style>
+                              <Width>0.5pt</Width>
+                            </RightBorder>
+                            <BackgroundColor>#e9e9e9</BackgroundColor>
+                            <VerticalAlign>Middle</VerticalAlign>
+                            <PaddingLeft>2pt</PaddingLeft>
+                            <PaddingRight>2pt</PaddingRight>
+                            <PaddingTop>2pt</PaddingTop>
+                            <PaddingBottom>2pt</PaddingBottom>
+                          </Style>
+                        </Textbox>
+                      </CellContents>
+                    </TablixCell>
+                    <TablixCell>
+                      <CellContents>
+                        <Textbox Name="Textbox38">
+                          <rd:DefaultName>Textbox34</rd:DefaultName>
+                          <KeepTogether>true</KeepTogether>
+                          <Paragraphs>
+                            <Paragraph>
+                              <TextRuns>
+                                <TextRun>
+                                  <Value>=Sum(Fields!ID2021Finishers.Value)/Sum(Fields!TtlClientSum.Value)</Value>
+                                  <Style>
+                                    <FontFamily>Calibri Light</FontFamily>
+                                    <FontSize>11pt</FontSize>
+                                    <FontWeight>Bold</FontWeight>
+                                    <Format>0;(0)</Format>
+                                  </Style>
+                                </TextRun>
+                              </TextRuns>
+                              <Style>
+                                <TextAlign>Center</TextAlign>
+                              </Style>
+                            </Paragraph>
+                          </Paragraphs>
+                          <Style>
+                            <Border>
+                              <Style>None</Style>
+                            </Border>
+                            <RightBorder>
+                              <Color>Black</Color>
+                              <Style>Solid</Style>
+                              <Width>0.5pt</Width>
+                            </RightBorder>
+                            <BackgroundColor>#e9e9e9</BackgroundColor>
+                            <VerticalAlign>Middle</VerticalAlign>
+                            <PaddingLeft>2pt</PaddingLeft>
+                            <PaddingRight>2pt</PaddingRight>
+                            <PaddingTop>2pt</PaddingTop>
+                            <PaddingBottom>2pt</PaddingBottom>
+                          </Style>
+                        </Textbox>
+                      </CellContents>
+                    </TablixCell>
+                    <TablixCell>
+                      <CellContents>
+                        <Textbox Name="Finishers">
+                          <rd:DefaultName>Finishers</rd:DefaultName>
+                          <CanGrow>true</CanGrow>
+                          <KeepTogether>true</KeepTogether>
+                          <Paragraphs>
+                            <Paragraph>
+                              <TextRuns>
+                                <TextRun>
+                                  <Value>=Sum(Fields!Finishers.Value)/Count(Fields!DimClientID.Value)</Value>
+                                  <Style>
+                                    <FontFamily>Calibri Light</FontFamily>
+                                    <FontSize>11pt</FontSize>
+                                    <FontWeight>Bold</FontWeight>
+                                    <Format>0%</Format>
+                                  </Style>
+                                </TextRun>
+                              </TextRuns>
+                              <Style>
+                                <TextAlign>Center</TextAlign>
+                              </Style>
+                            </Paragraph>
+                          </Paragraphs>
+                          <Style>
+                            <Border>
+                              <Style>None</Style>
+                            </Border>
+                            <BackgroundColor>#e9e9e9</BackgroundColor>
+                            <VerticalAlign>Middle</VerticalAlign>
+                            <PaddingLeft>2pt</PaddingLeft>
+                            <PaddingRight>2pt</PaddingRight>
+                            <PaddingTop>2pt</PaddingTop>
+                            <PaddingBottom>2pt</PaddingBottom>
+                          </Style>
+                        </Textbox>
+                      </CellContents>
+                    </TablixCell>
+                    <TablixCell>
+                      <CellContents>
+                        <Textbox Name="Textbox11">
+                          <rd:DefaultName>Textbox11</rd:DefaultName>
+                          <CanGrow>true</CanGrow>
+                          <KeepTogether>true</KeepTogether>
+                          <Paragraphs>
+                            <Paragraph>
+                              <TextRuns>
+                                <TextRun>
+                                  <Value>=Sum(Fields!TotalRepaid.Value)/Sum(Fields!TotalCredit.Value)</Value>
+                                  <Style>
+                                    <FontFamily>Calibri Light</FontFamily>
+                                    <FontSize>11pt</FontSize>
+                                    <Format>#,0.00%</Format>
+                                  </Style>
+                                </TextRun>
+                              </TextRuns>
+                              <Style>
+                                <TextAlign>Center</TextAlign>
+                              </Style>
+                            </Paragraph>
+                          </Paragraphs>
+                          <Style>
+                            <Border>
+                              <Style>None</Style>
+                            </Border>
+                            <RightBorder>
+                              <Style>Solid</Style>
+                            </RightBorder>
+                            <BackgroundColor>#e9e9e9</BackgroundColor>
+                            <VerticalAlign>Middle</VerticalAlign>
+                            <PaddingLeft>2pt</PaddingLeft>
+                            <PaddingRight>2pt</PaddingRight>
+                            <PaddingTop>2pt</PaddingTop>
+                            <PaddingBottom>2pt</PaddingBottom>
+                          </Style>
+                        </Textbox>
+                      </CellContents>
+                    </TablixCell>
+                    <TablixCell>
+                      <CellContents>
+                        <rd:Selected>true</rd:Selected>
+                        <Textbox Name="ID2021Finishers">
+                          <rd:DefaultName>ID2021Finishers</rd:DefaultName>
+                          <CanGrow>true</CanGrow>
+                          <KeepTogether>true</KeepTogether>
+                          <Paragraphs>
+                            <Paragraph>
+                              <TextRuns>
+                                <TextRun>
+                                  <Value>=Sum(Fields!ID2021Finishers.Value)/Sum(Fields!TtlClientSum.Value)</Value>
+                                  <Style>
+                                    <FontFamily>Calibri Light</FontFamily>
+                                    <FontSize>11pt</FontSize>
+                                    <Format>0%</Format>
+                                  </Style>
+                                </TextRun>
+                              </TextRuns>
+                              <Style>
+                                <TextAlign>Center</TextAlign>
+                              </Style>
+                            </Paragraph>
+                          </Paragraphs>
+                          <Style>
+                            <Border>
+                              <Style>None</Style>
+                            </Border>
+                            <RightBorder>
+                              <Style>Solid</Style>
+                            </RightBorder>
+                            <BackgroundColor>#e9e9e9</BackgroundColor>
+                            <VerticalAlign>Middle</VerticalAlign>
+                            <PaddingLeft>2pt</PaddingLeft>
+                            <PaddingRight>2pt</PaddingRight>
+                            <PaddingTop>2pt</PaddingTop>
+                            <PaddingBottom>2pt</PaddingBottom>
+                          </Style>
+                        </Textbox>
+                      </CellContents>
+                    </TablixCell>
+                    <TablixCell>
+                      <CellContents>
+                        <Textbox Name="Finishers2020">
+                          <rd:DefaultName>Finishers2020</rd:DefaultName>
+                          <CanGrow>true</CanGrow>
+                          <KeepTogether>true</KeepTogether>
+                          <Paragraphs>
+                            <Paragraph>
+                              <TextRuns>
+                                <TextRun>
+                                  <Value>=Sum(Fields!Finishers2020.Value)/Sum(Fields!TtlClientSum20.Value)</Value>
+                                  <Style>
+                                    <FontFamily>Calibri Light</FontFamily>
+                                    <FontSize>11pt</FontSize>
+                                    <Format>0%</Format>
+                                  </Style>
+                                </TextRun>
+                              </TextRuns>
+                              <Style>
+                                <TextAlign>Center</TextAlign>
+                              </Style>
+                            </Paragraph>
+                          </Paragraphs>
+                          <Style>
+                            <Border>
+                              <Style>None</Style>
+                            </Border>
+                            <RightBorder>
+                              <Style>Solid</Style>
+                            </RightBorder>
+                            <BackgroundColor>#e9e9e9</BackgroundColor>
+                            <VerticalAlign>Middle</VerticalAlign>
+                            <PaddingLeft>2pt</PaddingLeft>
+                            <PaddingRight>2pt</PaddingRight>
+                            <PaddingTop>2pt</PaddingTop>
+                            <PaddingBottom>2pt</PaddingBottom>
+                          </Style>
+                        </Textbox>
+                      </CellContents>
+                    </TablixCell>
+                  </TablixCells>
+                </TablixRow>
+                <TablixRow>
+                  <Height>0.25in</Height>
+                  <TablixCells>
+                    <TablixCell>
+                      <CellContents>
+                        <Textbox Name="DistrictName4">
+                          <rd:DefaultName>DistrictName2</rd:DefaultName>
+                          <KeepTogether>true</KeepTogether>
+                          <Paragraphs>
+                            <Paragraph>
+                              <TextRuns>
+                                <TextRun>
+                                  <Value>=Fields!DistrictName.Value</Value>
+                                  <Style>
+                                    <FontFamily>Calibri Light</FontFamily>
+                                    <FontSize>11pt</FontSize>
+                                  </Style>
+                                </TextRun>
+                              </TextRuns>
+                              <Style>
+                                <TextAlign>Center</TextAlign>
+                              </Style>
+                            </Paragraph>
+                          </Paragraphs>
+                          <Style>
+                            <Border>
+                              <Style>None</Style>
+                            </Border>
+                            <RightBorder>
+                              <Color>Black</Color>
+                              <Style>Solid</Style>
+                              <Width>0.5pt</Width>
+                            </RightBorder>
+                            <VerticalAlign>Bottom</VerticalAlign>
+                            <PaddingLeft>2pt</PaddingLeft>
+                            <PaddingRight>2pt</PaddingRight>
+                            <PaddingTop>2pt</PaddingTop>
+                            <PaddingBottom>2pt</PaddingBottom>
+                          </Style>
+                        </Textbox>
+                        <ColSpan>2</ColSpan>
+                      </CellContents>
+                    </TablixCell>
+                    <TablixCell />
+                    <TablixCell>
+                      <CellContents>
+                        <Textbox Name="SiteName">
+                          <rd:DefaultName>SiteName</rd:DefaultName>
+                          <CanGrow>true</CanGrow>
+                          <KeepTogether>true</KeepTogether>
+                          <Paragraphs>
+                            <Paragraph>
+                              <TextRuns>
+                                <TextRun>
+                                  <Value>=Fields!SiteName.Value</Value>
+                                  <Style>
+                                    <FontFamily>Calibri Light</FontFamily>
+                                    <FontSize>11pt</FontSize>
+                                  </Style>
+                                </TextRun>
+                              </TextRuns>
+                              <Style>
+                                <TextAlign>Left</TextAlign>
+                              </Style>
+                            </Paragraph>
+                          </Paragraphs>
+                          <Style>
+                            <Border>
+                              <Style>None</Style>
+                            </Border>
+                            <RightBorder>
+                              <Color>Black</Color>
+                              <Style>Solid</Style>
+                              <Width>0.5pt</Width>
+                            </RightBorder>
+                            <VerticalAlign>Bottom</VerticalAlign>
+                            <PaddingLeft>2pt</PaddingLeft>
+                            <PaddingRight>2pt</PaddingRight>
+                            <PaddingTop>2pt</PaddingTop>
+                            <PaddingBottom>2pt</PaddingBottom>
+                          </Style>
+                        </Textbox>
+                      </CellContents>
+                    </TablixCell>
+                    <TablixCell>
+                      <CellContents>
+                        <Textbox Name="Textbox52">
+                          <rd:DefaultName>Textbox51</rd:DefaultName>
+                          <KeepTogether>true</KeepTogether>
+                          <Paragraphs>
+                            <Paragraph>
+                              <TextRuns>
+                                <TextRun>
+                                  <Value>=Sum(Fields!AMOUNT.Value)/Sum(Fields!TotalCredit.Value)</Value>
+                                  <Style>
+                                    <FontFamily>Calibri Light</FontFamily>
+                                    <FontSize>11pt</FontSize>
+                                    <Format>#,0.00%</Format>
+                                  </Style>
+                                </TextRun>
+                              </TextRuns>
+                              <Style>
+                                <TextAlign>Center</TextAlign>
+                              </Style>
+                            </Paragraph>
+                          </Paragraphs>
+                          <Style>
+                            <Border>
+                              <Style>None</Style>
+                            </Border>
+                            <VerticalAlign>Middle</VerticalAlign>
+                            <PaddingLeft>2pt</PaddingLeft>
+                            <PaddingRight>2pt</PaddingRight>
+                            <PaddingTop>2pt</PaddingTop>
+                            <PaddingBottom>2pt</PaddingBottom>
+                          </Style>
+                        </Textbox>
+                      </CellContents>
+                    </TablixCell>
+                    <TablixCell>
+                      <CellContents>
+                        <Textbox Name="Textbox35">
+                          <rd:DefaultName>Textbox35</rd:DefaultName>
+                          <KeepTogether>true</KeepTogether>
+                          <Paragraphs>
+                            <Paragraph>
+                              <TextRuns>
+                                <TextRun>
+                                  <Label>% Repaid</Label>
+                                  <Value>=Sum(Fields!TtlRpdLastYR.Value)/Sum(Fields!LstYrCredt.Value)</Value>
+                                  <Style>
+                                    <FontFamily>Calibri Light</FontFamily>
+                                    <FontSize>11pt</FontSize>
+                                    <Format>0.0%</Format>
+                                  </Style>
+                                </TextRun>
+                              </TextRuns>
+                              <Style>
+                                <TextAlign>Center</TextAlign>
+                              </Style>
+                            </Paragraph>
+                          </Paragraphs>
+                          <Style>
+                            <Border>
+                              <Style>None</Style>
+                            </Border>
+                            <RightBorder>
+                              <Style>Solid</Style>
+                              <Width>0.5pt</Width>
+                            </RightBorder>
+                            <VerticalAlign>Middle</VerticalAlign>
+                            <PaddingLeft>2pt</PaddingLeft>
+                            <PaddingRight>2pt</PaddingRight>
+                            <PaddingTop>2pt</PaddingTop>
+                            <PaddingBottom>2pt</PaddingBottom>
+                          </Style>
+                        </Textbox>
+                      </CellContents>
+                    </TablixCell>
+                    <TablixCell>
+                      <CellContents>
+                        <Textbox Name="Textbox80">
+                          <rd:DefaultName>Textbox80</rd:DefaultName>
+                          <CanGrow>true</CanGrow>
+                          <KeepTogether>true</KeepTogether>
+                          <Paragraphs>
+                            <Paragraph>
+                              <TextRuns>
+                                <TextRun>
+                                  <Value>=IIF(Sum(Fields!AMOUNT.Value)/Sum(Fields!TotalCredit.Value)&gt;Sum(Fields!TtlRpdLastYR.Value)/Sum(Fields!LstYrCredt.Value),"Above 2021","Below 2021")</Value>
+                                  <Style>
+                                    <FontFamily>Calibri Light</FontFamily>
+                                    <FontSize>11pt</FontSize>
+                                    <Format>#,0.00%</Format>
+                                  </Style>
+                                </TextRun>
+                              </TextRuns>
+                              <Style>
+                                <TextAlign>Center</TextAlign>
+                              </Style>
+                            </Paragraph>
+                          </Paragraphs>
+                          <Style>
+                            <Border>
+                              <Style>None</Style>
+                            </Border>
+                            <RightBorder>
+                              <Style>Solid</Style>
+                              <Width>0.5pt</Width>
+                            </RightBorder>
+                            <VerticalAlign>Middle</VerticalAlign>
+                            <PaddingLeft>2pt</PaddingLeft>
+                            <PaddingRight>2pt</PaddingRight>
+                            <PaddingTop>2pt</PaddingTop>
+                            <PaddingBottom>2pt</PaddingBottom>
+                          </Style>
+                        </Textbox>
+                      </CellContents>
+                    </TablixCell>
+                    <TablixCell>
+                      <CellContents>
+                        <Textbox Name="Textbox103">
+                          <rd:DefaultName>Textbox35</rd:DefaultName>
+                          <KeepTogether>true</KeepTogether>
+                          <Paragraphs>
+                            <Paragraph>
+                              <TextRuns>
+                                <TextRun>
+                                  <Value>=Sum(Fields!ID2021Finishers.Value)/Sum(Fields!TtlClientSum.Value)</Value>
+                                  <Style>
+                                    <FontFamily>Calibri Light</FontFamily>
+                                    <FontSize>11pt</FontSize>
+                                    <FontWeight>Bold</FontWeight>
+                                    <Format>0;(0)</Format>
+                                  </Style>
+                                </TextRun>
+                              </TextRuns>
+                              <Style>
+                                <TextAlign>Center</TextAlign>
+                              </Style>
+                            </Paragraph>
+                          </Paragraphs>
+                          <Style>
+                            <Border>
+                              <Style>None</Style>
+                            </Border>
+                            <RightBorder>
+                              <Color>Black</Color>
+                              <Style>Solid</Style>
+                              <Width>0.5pt</Width>
+                            </RightBorder>
+                            <VerticalAlign>Middle</VerticalAlign>
+                            <PaddingLeft>2pt</PaddingLeft>
+                            <PaddingRight>2pt</PaddingRight>
+                            <PaddingTop>2pt</PaddingTop>
+                            <PaddingBottom>2pt</PaddingBottom>
+                          </Style>
+                        </Textbox>
+                      </CellContents>
+                    </TablixCell>
+                    <TablixCell>
+                      <CellContents>
+                        <Textbox Name="Finishers1">
+                          <rd:DefaultName>Finishers1</rd:DefaultName>
+                          <CanGrow>true</CanGrow>
+                          <KeepTogether>true</KeepTogether>
+                          <Paragraphs>
+                            <Paragraph>
+                              <TextRuns>
+                                <TextRun>
+                                  <Value>=Sum(Fields!Finishers.Value)/Count(Fields!DimClientID.Value)</Value>
+                                  <Style>
+                                    <FontFamily>Calibri Light</FontFamily>
+                                    <FontSize>11pt</FontSize>
+                                    <FontWeight>Bold</FontWeight>
+                                    <Format>0%</Format>
+                                  </Style>
+                                </TextRun>
+                              </TextRuns>
+                              <Style>
+                                <TextAlign>Center</TextAlign>
+                              </Style>
+                            </Paragraph>
+                          </Paragraphs>
+                          <Style>
+                            <Border>
+                              <Style>None</Style>
+                            </Border>
+                            <VerticalAlign>Middle</VerticalAlign>
+                            <PaddingLeft>2pt</PaddingLeft>
+                            <PaddingRight>2pt</PaddingRight>
+                            <PaddingTop>2pt</PaddingTop>
+                            <PaddingBottom>2pt</PaddingBottom>
+                          </Style>
+                        </Textbox>
+                      </CellContents>
+                    </TablixCell>
+                    <TablixCell>
+                      <CellContents>
+                        <Textbox Name="count">
+                          <rd:DefaultName>count</rd:DefaultName>
+                          <KeepTogether>true</KeepTogether>
+                          <Paragraphs>
+                            <Paragraph>
+                              <TextRuns>
+                                <TextRun>
+                                  <Value>=Sum(Fields!TotalRepaid.Value)/Sum(Fields!TotalCredit.Value)</Value>
+                                  <Style>
+                                    <FontFamily>Calibri Light</FontFamily>
+                                    <FontSize>11pt</FontSize>
+                                    <Format>#,0.00%</Format>
+                                  </Style>
+                                </TextRun>
+                              </TextRuns>
+                              <Style>
+                                <TextAlign>Center</TextAlign>
+                              </Style>
+                            </Paragraph>
+                          </Paragraphs>
+                          <Style>
+                            <Border>
+                              <Style>None</Style>
+                            </Border>
+                            <RightBorder>
+                              <Style>Solid</Style>
+                            </RightBorder>
+                            <VerticalAlign>Middle</VerticalAlign>
+                            <PaddingLeft>2pt</PaddingLeft>
+                            <PaddingRight>2pt</PaddingRight>
+                            <PaddingTop>2pt</PaddingTop>
+                            <PaddingBottom>2pt</PaddingBottom>
+                          </Style>
+                        </Textbox>
+                      </CellContents>
+                    </TablixCell>
+                    <TablixCell>
+                      <CellContents>
+                        <Textbox Name="TtlClientSum">
+                          <rd:DefaultName>TtlClientSum</rd:DefaultName>
+                          <CanGrow>true</CanGrow>
+                          <KeepTogether>true</KeepTogether>
+                          <Paragraphs>
+                            <Paragraph>
+                              <TextRuns>
+                                <TextRun>
+                                  <Value>=Sum(Fields!ID2021Finishers.Value)/Sum(Fields!TtlClientSum.Value)</Value>
+                                  <Style>
+                                    <FontFamily>Calibri Light</FontFamily>
+                                    <FontSize>11pt</FontSize>
+                                    <Format>0%</Format>
+                                  </Style>
+                                </TextRun>
+                              </TextRuns>
+                              <Style>
+                                <TextAlign>Center</TextAlign>
+                              </Style>
+                            </Paragraph>
+                          </Paragraphs>
+                          <Style>
+                            <Border>
+                              <Style>None</Style>
+                            </Border>
+                            <RightBorder>
+                              <Style>Solid</Style>
+                            </RightBorder>
+                            <VerticalAlign>Middle</VerticalAlign>
+                            <PaddingLeft>2pt</PaddingLeft>
+                            <PaddingRight>2pt</PaddingRight>
+                            <PaddingTop>2pt</PaddingTop>
+                            <PaddingBottom>2pt</PaddingBottom>
+                          </Style>
+                        </Textbox>
+                      </CellContents>
+                    </TablixCell>
+                    <TablixCell>
+                      <CellContents>
+                        <Textbox Name="TtlClientSum20">
+                          <rd:DefaultName>TtlClientSum20</rd:DefaultName>
+                          <CanGrow>true</CanGrow>
+                          <KeepTogether>true</KeepTogether>
+                          <Paragraphs>
+                            <Paragraph>
+                              <TextRuns>
+                                <TextRun>
+                                  <Value>=Sum(Fields!Finishers2020.Value)/Sum(Fields!TtlClientSum20.Value)</Value>
+                                  <Style>
+                                    <FontFamily>Calibri Light</FontFamily>
+                                    <FontSize>11pt</FontSize>
+                                    <Format>0%</Format>
+                                  </Style>
+                                </TextRun>
+                              </TextRuns>
+                              <Style>
+                                <TextAlign>Center</TextAlign>
+                              </Style>
+                            </Paragraph>
+                          </Paragraphs>
+                          <Style>
+                            <Border>
+                              <Style>None</Style>
+                            </Border>
+                            <RightBorder>
+                              <Style>Solid</Style>
+                            </RightBorder>
+                            <VerticalAlign>Middle</VerticalAlign>
+                            <PaddingLeft>2pt</PaddingLeft>
+                            <PaddingRight>2pt</PaddingRight>
+                            <PaddingTop>2pt</PaddingTop>
+                            <PaddingBottom>2pt</PaddingBottom>
+                          </Style>
+                        </Textbox>
+                      </CellContents>
+                    </TablixCell>
+                  </TablixCells>
+                </TablixRow>
+              </TablixRows>
+            </TablixBody>
+            <TablixColumnHierarchy>
+              <TablixMembers>
+                <TablixMember />
+                <TablixMember />
+                <TablixMember />
+                <TablixMember />
+                <TablixMember />
+                <TablixMember />
+                <TablixMember />
+                <TablixMember />
+                <TablixMember />
+                <TablixMember />
+                <TablixMember />
+              </TablixMembers>
+            </TablixColumnHierarchy>
+            <TablixRowHierarchy>
+              <TablixMembers>
+                <TablixMember>
+                  <Group Name="DistrictName">
+                    <GroupExpressions>
+                      <GroupExpression>=Fields!DistrictName.Value</GroupExpression>
+                    </GroupExpressions>
+                  </Group>
+                  <SortExpressions>
+                    <SortExpression>
+                      <Value>=Fields!DistrictName.Value</Value>
+                    </SortExpression>
+                  </SortExpressions>
+                  <TablixMembers>
+                    <TablixMember>
+                      <KeepWithGroup>After</KeepWithGroup>
+                    </TablixMember>
+                    <TablixMember>
+                      <KeepWithGroup>After</KeepWithGroup>
+                    </TablixMember>
+                    <TablixMember>
+                      <Group Name="SiteName">
+                        <GroupExpressions>
+                          <GroupExpression>=Fields!SiteName.Value</GroupExpression>
+                        </GroupExpressions>
+                      </Group>
+                      <SortExpressions>
+                        <SortExpression>
+                          <Value>=Fields!SiteName.Value</Value>
+                        </SortExpression>
+                      </SortExpressions>
+                      <TablixMembers>
+                        <TablixMember />
+                      </TablixMembers>
+                    </TablixMember>
+                  </TablixMembers>
+                </TablixMember>
+              </TablixMembers>
+            </TablixRowHierarchy>
+            <KeepTogether>true</KeepTogether>
+            <DataSetName>RepaymentDashboardDatasource</DataSetName>
+            <Height>0.75in</Height>
+            <Width>12.29888in</Width>
+            <Style>
+              <Border>
+                <Style>None</Style>
+              </Border>
+            </Style>
+          </Tablix>
+        </ReportItems>
+        <Height>9.69in</Height>
+        <Style>
+          <Border>
+            <Style>None</Style>
+          </Border>
+        </Style>
+      </Body>
+      <Width>12.29888in</Width>
+      <Page>
+        <PageHeight>11.69in</PageHeight>
+        <PageWidth>16.54in</PageWidth>
+        <LeftMargin>0.5in</LeftMargin>
+        <RightMargin>0.5in</RightMargin>
+        <TopMargin>0.5in</TopMargin>
+        <BottomMargin>0.5in</BottomMargin>
+        <Style />
+      </Page>
+    </ReportSection>
+  </ReportSections>
+  <ReportParameters>
+    <ReportParameter Name="EndDate">
+      <DataType>DateTime</DataType>
+      <Prompt>End Date</Prompt>
+    </ReportParameter>
+  </ReportParameters>
+  <ReportParametersLayout>
+    <GridLayoutDefinition>
+      <NumberOfColumns>1</NumberOfColumns>
+      <NumberOfRows>1</NumberOfRows>
+      <CellDefinitions>
+        <CellDefinition>
+          <ColumnIndex>0</ColumnIndex>
+          <RowIndex>0</RowIndex>
+          <ParameterName>EndDate</ParameterName>
+        </CellDefinition>
+      </CellDefinitions>
+    </GridLayoutDefinition>
+  </ReportParametersLayout>
+  <EmbeddedImages>
+    <EmbeddedImage Name="OAFLogo">
+      <MIMEType>image/png</MIMEType>
+      <ImageData>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</ImageData>
+    </EmbeddedImage>
+  </EmbeddedImages>
+</Report>

@@ -1,0 +1,21 @@
+SELECT CountryName
+, SeasonName
+, RegionName
+, DistrictName
+, SectorName
+, SiteName
+, GroupName
+, LastName
+, FirstName
+, BundleName
+, InputNames
+, BundleQuantity
+, BundleUnit
+, BundleCredit
+, AccountNumber
+, InputCredit
+, InputCreditAdjusted 
+, BundleStatus
+, BundleUnit
+
+FROM v_ClientBundles
